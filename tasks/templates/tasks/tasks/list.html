@@ -1,0 +1,183 @@
+{% extends "tasks/base.html" %}
+{% load tasks_tags %}
+{% load static %}
+{% block title %}
+{% if category %}{{ category.name }}{% else %}All Tasks{% endif %}
+{% endblock %}
+{% block content %}
+
+  <input type="checkbox" id="check">
+  <label for="check">
+    <i class="fa fa-bars" id="btn"></i>
+    <i class="fa fa-times" id="cancel"></i>
+  </label>
+  <div class="logo">ToDeadline</div>
+
+  <div id="sidebar">
+    <ul>
+      <li>
+        <h3>Actions</h3>
+        <ul>
+          <li><button id="add-new-task" type="button" class="btn btn-actions">Add new Task</button></li>
+          <li>
+            <form action="{% url 'tasks:delete_done_tasks' %}" method="post"
+            onsubmit="return confirm('Are you sure you want to remove all Tasks that are market as Done?');">
+            {% csrf_token %}
+            <input type="submit" value="Delete copleted tasks" class="btn btn-actions">
+          </form>
+          </li>
+        </ul>
+        
+      </li>
+      <li>
+        <h3>My Categories</h3>
+        <ul class="list-categories">
+          <li {% if not category %}class="selected" {% endif %}>
+            <a href="{% url "tasks:task_list" %}">All</a>
+          </li>
+          {% for c in categories %}
+          <li {% if category.slug == c.slug %}class="selected" {% endif %}>
+            <div class='category-in-line'>
+              <a href="{{ c.get_absolute_url }}">{{ c.name }}</a>
+
+                    <form action="{% url 'tasks:delete_category' c.id %}" method="post" class="delete-category"
+                onsubmit="return confirm('Do you really want to delete the {{ c.name }} category? Also all tasks in this category will be deleted!');">
+                {% csrf_token %}
+                <input type="submit" value="+" class="remove-category">
+              </form>
+            </div>
+
+          </li>
+          {% endfor %}
+
+          <div class="input-bar">
+            <div class="input-bar-item width100">
+              <form action="{% url 'tasks:add_category' %}" method="post" id="create-category">
+                <div class="input-group">
+                  {{ category_form.name }}
+
+                  <span class="input-group-btn">
+                    {% csrf_token %}
+                    <input type="submit" value="Add" id="add-category" class="btn btn-info">
+                  </span>
+
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </ul>
+      </li>
+    </ul>
+    <span>      
+      {% if messages %}
+      <ul class="messages">
+      {% for message in messages %}
+      <li class="{{ message.tags }}">
+      <span><a href="/" class="close">x</a></span>
+      <span>{{ message|safe }}</span>
+     
+      </li>
+      {% endfor %}
+      </ul>
+      {% endif %}
+    </span>
+  </div>
+
+
+  <div id="content">
+    {% if tasks|length == 0 %}
+    <div id="empty">No Tasks to do in this category...</div>
+    {% else %}
+  <div id="main" class="product-list">
+
+    {% for choice in choices %}
+
+    <div class="item">
+      <h2>{{ choice }}</h2>
+      
+      {% for task in tasks|importance:choice %}
+      <div class="todo-list">
+
+        <div class="{% if task.complete == False %}item-row{% else %}item-row-done{% endif %}">
+          <form action="{% url 'tasks:delete_task' task.id %}" method="post" 
+            onsubmit="return confirm('Do you really want to delete the {{ task }}?');">
+            {% csrf_token %}
+            <input type="submit" value="Delete Task" class="btn btn-sm btn-delete">
+          </form>
+
+          {% if task.complete == True %}
+          <div class="task-title-done">{{task.title}}</div>
+          {% else %}
+          <div class="task-title">{{task.title}}</div>
+          {% endif %}
+          <div class="taskCountdown" start="{{ task.doto|date:'M d, Y H:i:s' }}"  {% if task.complete == True %}finished="{{ task.finished|date:'M d, Y H:i:s' }}"{% endif %}>
+            <div>
+              <span class="days"></span>
+              <div class="smalltext">Days</div>
+            </div>
+            <div>
+              <span class="hours"></span>
+              <div class="smalltext">Hours</div>
+            </div>
+            <div>
+              <span class="minutes"></span>
+              <div class="smalltext">Minutes</div>
+            </div>
+            <div>
+              <span class="seconds"></span>
+              <div class="smalltext">Seconds</div>
+            </div>
+          </div>
+          <div class="doto"><b>Deadline</b>: {{task.doto}}</div>
+          {% if task.complete == True %}<div class="doto"><b>Task done: </b>{{ task.finished}} Well done! <i
+              class="fa fa-thumbs-o-up" aria-hidden="true"></i></div>{% endif %}
+          {% if task.complete == False %}
+          <form action="{% url 'tasks:done_task' task.id %}" method="post">
+            {% csrf_token %}
+            <input type="submit" value="Mark as Done" class="btn btn-sm btn-danger">
+          </form>
+          {% endif %}
+        </div>
+
+
+      </div>
+
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+ 
+</div>
+
+
+
+
+<div class="popout" id="popout">
+  <div id="overlay" onclick="overlayoff()"></div>
+  <div class="center-column">
+
+    <form method="post" action="{% url 'tasks:add_task' %}">
+      {{ task_form.title }}
+      {{ task_form.category }}
+      <h3>Priority:</h3>
+      {{ task_form.level }}
+      <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
+        {{ task_form.doto }}
+        <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
+          <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+        </div>
+      </div>
+      {% csrf_token %}
+      <div class="add-buttons">
+        <a class="btn btn-danger task-add" id="cancle-new-task" href="/">Cancel</a>
+        <input class="btn btn-actions task-add" type="submit"
+          value="{% if 'update_task' in request.path %}Update task{% else %}Add task{% endif %}">
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
